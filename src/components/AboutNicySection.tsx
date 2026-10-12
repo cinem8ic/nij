@@ -1,0 +1,759 @@
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion';
+import { assetUrl } from '../utils/assets';
+
+// 8 Active Class Slides
+// WACKING is active with /classes/8.jpg
+// TOLLYWOOD and BOLLYWOOD are empty architectural panels as requested
+export interface ClassSlideItem {
+  id: string;
+  label: string;
+  image: string;
+}
+
+export const CLASS_SLIDES: ClassSlideItem[] = [
+  { id: 'class-1', label: 'HIP HOP', image: assetUrl('/classes/1.jpg') },
+  { id: 'class-2', label: 'BREAKDANCING', image: assetUrl('/classes/2.jpg') },
+  { id: 'class-3', label: 'POPPING & LOCKING', image: assetUrl('/classes/3.jpg') },
+  { id: 'class-4', label: 'FREESTYLE & BATTLE TACTICS', image: assetUrl('/classes/4.jpg') },
+  { id: 'class-8', label: 'WACKING', image: assetUrl('/classes/8.jpg') },
+  { id: 'class-5', label: 'CHOREO & PERFORMANCE', image: assetUrl('/classes/5.jpg') },
+  { id: 'class-6', label: 'TOLLYWOOD', image: '' },
+  { id: 'class-7', label: 'BOLLYWOOD', image: '' },
+];
+
+// Connected Loop: First and Last connected infinitely in a continuous cylindrical ring
+const VIRTUAL_SLIDES: (ClassSlideItem & { virtualKey: string })[] = [
+  ...CLASS_SLIDES.map((item, i) => ({ ...item, virtualKey: `loop1-${item.id}-${i}` })),
+  ...CLASS_SLIDES.map((item, i) => ({ ...item, virtualKey: `loop2-${item.id}-${i}` })),
+];
+
+export interface DaySchedule {
+  id: string;
+  short: string;
+  full: string;
+  classes: { time: string; name: string }[];
+}
+
+export const WEEKLY_SCHEDULE: DaySchedule[] = [
+  {
+    id: 'mon',
+    short: 'MON',
+    full: 'MONDAY',
+    classes: [
+      { time: '08:30', name: 'Dance Fitness' },
+      { time: '09:30', name: 'Dance Fitness' },
+      { time: '04:30', name: 'Toddlers' },
+      { time: '05:15', name: 'Kids' },
+      { time: '06:00', name: 'Dance Fitness' },
+      { time: '07:00', name: 'Tollywood' },
+      { time: '08:00', name: 'Semi Classical' },
+    ],
+  },
+  {
+    id: 'tue',
+    short: 'TUE',
+    full: 'TUESDAY',
+    classes: [
+      { time: '08:30', name: 'Dance Fitness' },
+      { time: '09:30', name: 'Dance Fitness' },
+      { time: '04:30', name: 'Toddlers' },
+      { time: '05:15', name: 'Kids' },
+      { time: '06:00', name: 'Dance Fitness' },
+      { time: '07:00', name: 'Bollywood' },
+      { time: '08:00', name: 'Contemporary' },
+    ],
+  },
+  {
+    id: 'wed',
+    short: 'WED',
+    full: 'WEDNESDAY',
+    classes: [
+      { time: '08:30', name: 'Dance Fitness' },
+      { time: '09:30', name: 'Dance Fitness' },
+      { time: '04:30', name: 'Toddlers' },
+      { time: '05:15', name: 'Kids' },
+      { time: '06:00', name: 'Dance Fitness' },
+      { time: '07:00', name: 'Tollywood' },
+      { time: '08:00', name: 'Semi Classical' },
+    ],
+  },
+  {
+    id: 'thu',
+    short: 'THU',
+    full: 'THURSDAY',
+    classes: [
+      { time: '08:30', name: 'Dance Fitness' },
+      { time: '09:30', name: 'Dance Fitness' },
+      { time: '04:30', name: 'Toddlers' },
+      { time: '05:15', name: 'Kids' },
+      { time: '06:00', name: 'Dance Fitness' },
+      { time: '07:00', name: 'Hip Hop' },
+      { time: '08:00', name: 'Contemporary' },
+    ],
+  },
+  {
+    id: 'fri',
+    short: 'FRI',
+    full: 'FRIDAY',
+    classes: [
+      { time: '08:30', name: 'Dance Fitness' },
+      { time: '09:30', name: 'Dance Fitness' },
+      { time: '04:30', name: 'Toddlers' },
+      { time: '05:15', name: 'Kids' },
+      { time: '06:00', name: 'Dance Fitness' },
+      { time: '07:00', name: 'Tollywood' },
+      { time: '08:00', name: 'Bollywood' },
+    ],
+  },
+];
+
+interface AboutNicySectionProps {
+  theme?: 'dark' | 'white';
+}
+
+export const AboutNicySection: React.FC<AboutNicySectionProps> = ({ theme = 'dark' }) => {
+  const isWhite = theme === 'white';
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [isInView, setIsInView] = useState(false);
+
+  // Clicking CLASSES title or Schedule button opens the schedule
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [activeDayIndex, setActiveDayIndex] = useState(0);
+
+  // Parallax on CLASSES text
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"]
+  });
+
+  const rawLogoY = useTransform(scrollYProgress, [0, 1], [-12, 12]);
+  const logoY = useSpring(rawLogoY, { stiffness: 100, damping: 25 });
+
+  // Mouse interactive stage physics (fast and responsive with continuous loop)
+  const scrollOffset = useRef(0);
+  const targetOffset = useRef(0);
+  const isDragging = useRef(false);
+  const hasDragged = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartOffset = useRef(0);
+  const rafId = useRef<number>(0);
+
+  const totalVirtualItems = VIRTUAL_SLIDES.length;
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsInView(entry.isIntersecting);
+        });
+      },
+      { threshold: 0.08 }
+    );
+
+    const currentSection = sectionRef.current;
+    if (currentSection) {
+      observer.observe(currentSection);
+    }
+
+    return () => {
+      if (currentSection) {
+        observer.unobserve(currentSection);
+      }
+    };
+  }, []);
+
+  // Fast, smooth mouse interactive RAF update — zero automatic slide, seamless loop!
+  useEffect(() => {
+    if (!isInView) return;
+
+    const updateStage = () => {
+      const diff = targetOffset.current - scrollOffset.current;
+      if (Math.abs(diff) > 0.05) {
+        scrollOffset.current += diff * 0.18; // fast snappy follow
+      } else {
+        scrollOffset.current = targetOffset.current;
+      }
+
+      const container = stageRef.current;
+      if (container) {
+        const containerWidth = container.clientWidth;
+        const centerX = containerWidth / 2;
+        const isMobile = containerWidth < 768;
+
+        const cardWidth = isMobile 
+          ? Math.max(160, containerWidth * 0.44) 
+          : Math.min(320, Math.max(220, containerWidth * 0.22));
+        const gap = isMobile ? 18 : 28;
+        const cardStride = cardWidth + gap;
+        const cycleWidth = totalVirtualItems * cardStride;
+        const halfCycle = cycleWidth / 2;
+
+        cardRefs.current.forEach((cardEl, idx) => {
+          if (!cardEl) return;
+
+          // Infinite cylindrical modulo wrapping connected first to last
+          let offset = ((idx * cardStride + scrollOffset.current) % cycleWidth + cycleWidth) % cycleWidth;
+          if (offset > halfCycle) offset -= cycleWidth;
+
+          const currentPos = centerX + offset;
+          const offsetFromCenter = offset;
+          const normDist = offsetFromCenter / (containerWidth * 0.44);
+          
+          // Refined 3D amphitheater cylindrical curve with center card prominent:
+          const angleY = Math.max(-32, Math.min(32, -normDist * 24));
+          const absDist = Math.abs(normDist);
+          const scale = Math.max(0.84, 1.03 - absDist * 0.12);
+          const translateZ = Math.max(-120, -Math.pow(absDist, 1.3) * 65);
+          const translateY = Math.min(16, Math.pow(absDist, 1.8) * 6);
+          const opacity = absDist > 1.8 ? Math.max(0, 1 - (absDist - 1.8) * 3) : 1;
+
+          cardEl.style.width = `${cardWidth}px`;
+          cardEl.style.transform = `translate3d(${currentPos - cardWidth / 2}px, ${translateY}px, ${translateZ}px) rotateY(${angleY}deg) scale(${scale})`;
+          cardEl.style.opacity = `${opacity}`;
+          cardEl.style.zIndex = `${Math.round(20 - Math.min(15, absDist * 5))}`;
+        });
+      }
+
+      rafId.current = requestAnimationFrame(updateStage);
+    };
+
+    rafId.current = requestAnimationFrame(updateStage);
+    return () => cancelAnimationFrame(rafId.current);
+  }, [isInView, totalVirtualItems]);
+
+  // Mouse interactivity: moving mouse across stage dynamically pans through the loop
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDragging.current || !stageRef.current) return;
+    const rect = stageRef.current.getBoundingClientRect();
+    const relativeX = (e.clientX - rect.left) / rect.width;
+    const container = stageRef.current;
+    const isMobile = container.clientWidth < 768;
+    const cardWidth = isMobile 
+      ? Math.max(160, container.clientWidth * 0.44) 
+      : Math.min(320, Math.max(220, container.clientWidth * 0.22));
+    const cardStride = cardWidth + (isMobile ? 18 : 28);
+    // Span through all 8 cards across stage width
+    const totalSpan = 8 * cardStride;
+    targetOffset.current = (0.5 - relativeX) * (totalSpan * 0.95);
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    isDragging.current = true;
+    hasDragged.current = false;
+    dragStartX.current = e.clientX;
+    dragStartOffset.current = targetOffset.current;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging.current) return;
+    const deltaX = e.clientX - dragStartX.current;
+    if (Math.abs(deltaX) > 6) {
+      hasDragged.current = true;
+    }
+    // Direct continuous drag tracking (seamless infinite loop)
+    targetOffset.current = dragStartOffset.current + deltaX * 1.35;
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    isDragging.current = false;
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {}
+  };
+
+  // Clicking an individual card: open schedule if user was not dragging
+  const handleCardClick = () => {
+    if (hasDragged.current) return;
+    setIsScheduleOpen(true);
+  };
+
+  // Mobile swipe handling on Schedule
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
+      if (deltaX < 0) {
+        setActiveDayIndex((prev) => Math.min(WEEKLY_SCHEDULE.length - 1, prev + 1));
+      } else {
+        setActiveDayIndex((prev) => Math.max(0, prev - 1));
+      }
+    }
+  };
+
+  const currentScheduleDay = WEEKLY_SCHEDULE[activeDayIndex];
+
+  return (
+    <section
+      id="about"
+      ref={sectionRef}
+      aria-label="Dance Classes & Disciplines"
+      className={`about-nicy-section ${isInView ? 'about-nicy-in-view' : ''}`}
+    >
+      <style>{`
+        .about-nicy-section {
+          --white: #FFFFFF;
+          --bronze-accent: #C5A059;
+
+          position: relative;
+          width: 100%;
+          min-height: auto;
+          overflow: hidden;
+          background: transparent !important;
+          background-color: transparent !important;
+          color: ${isWhite ? '#141312' : 'var(--white)'};
+          font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-weight: 400;
+          box-sizing: border-box;
+          user-select: none;
+          perspective: 1200px;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          align-items: center;
+          padding: clamp(140px, 18vh, 230px) 0 clamp(80px, 10vw, 130px);
+        }
+
+        .about-nicy-3d-stage {
+          position: relative;
+          margin-top: clamp(16px, 2.5vh, 28px);
+          width: 100%;
+          height: clamp(480px, 60vh, 560px);
+          z-index: 3;
+          perspective: 1200px;
+          perspective-origin: 50% 50%;
+          overflow: visible;
+          cursor: grab;
+          touch-action: pan-y;
+        }
+
+        .about-nicy-3d-stage:active {
+          cursor: grabbing;
+        }
+
+        .about-nicy-3d-track {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          transform-style: preserve-3d;
+        }
+
+        .about-nicy-curved-card {
+          position: absolute;
+          top: 0;
+          left: 0;
+          will-change: transform;
+          transform-style: preserve-3d;
+        }
+
+        .about-nicy-card-shell {
+          width: 100%;
+          aspect-ratio: 0.70;
+          border-radius: 0px !important;
+          overflow: hidden;
+          background-color: ${isWhite ? '#FFFFFF' : '#0c0c10'};
+          position: relative;
+          border: 1px solid ${isWhite ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.12)'};
+          box-shadow: ${isWhite ? '0 16px 36px rgba(0, 0, 0, 0.06)' : '0 16px 36px rgba(0, 0, 0, 0.85)'};
+          transition: border-color 0.25s ease, background-color 0.25s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .about-nicy-curved-card:hover .about-nicy-card-shell {
+          border-color: ${isWhite ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.4)'};
+          background-color: ${isWhite ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.04)'};
+        }
+
+        .about-nicy-card-glare {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.06) 0%,
+            transparent 50%,
+            rgba(0, 0, 0, 0.2) 100%
+          );
+          pointer-events: none;
+        }
+
+        .about-nicy-card-caption {
+          margin-top: 12px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          pointer-events: none;
+        }
+
+        .about-nicy-caption-label {
+          font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-size: clamp(9px, 0.75vw, 11px);
+          font-weight: 600;
+          letter-spacing: 0.18em;
+          color: ${isWhite ? '#141312' : '#FFFFFF'};
+          text-transform: uppercase;
+          white-space: nowrap;
+          text-shadow: ${isWhite ? '0 1px 2px rgba(255, 255, 255, 0.8)' : '0 2px 6px rgba(0, 0, 0, 0.8)'};
+        }
+
+        /* MONUMENTAL CENTER TOP PLACEMENT FOR CLASSES TITLE (Clickable Trigger) */
+        .about-nicy-hairline-lockup {
+          position: relative;
+          z-index: 25;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          opacity: 0;
+          transform: translateY(0px);
+          margin-bottom: clamp(28px, 4vh, 48px);
+          transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .about-nicy-monolith-relative-stage {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: transform 0.25s ease;
+        }
+
+        .about-nicy-monolith-relative-stage:hover {
+          transform: scale(1.02);
+        }
+
+        .about-nicy-monolith-word {
+          font-family: 'Bebas Neue', 'Montserrat', sans-serif;
+          font-weight: 900;
+          font-size: clamp(52px, 7.5vw, 114px);
+          line-height: 0.88;
+          letter-spacing: clamp(0.04em, 0.1vw, 0.08em);
+          text-transform: uppercase;
+          color: ${isWhite ? '#141312 !important' : '#FFFFFF !important'};
+          display: inline-block;
+          transform: scaleY(1.26);
+          transform-origin: center center;
+          filter: ${isWhite ? 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08))' : 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6))'};
+          user-select: none;
+          white-space: nowrap;
+        }
+
+        .about-nicy-logo-centered-overlay {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 3;
+        }
+
+        .about-nicy-signature-logo {
+          width: 85%;
+          max-width: 90%;
+          height: auto;
+          max-height: 150%;
+          object-fit: contain;
+          display: block;
+          filter: ${isWhite 
+            ? 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(255, 255, 255, 0.95))' 
+            : 'brightness(0) saturate(100%) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.95))'};
+        }
+
+        @media (max-width: 767px) {
+          .about-nicy-section {
+            min-height: auto !important;
+            padding: 110px 0 60px !important;
+          }
+          .about-nicy-3d-stage {
+            margin-top: 14px !important;
+            height: clamp(380px, 54vh, 440px) !important;
+          }
+          .about-nicy-hairline-lockup {
+            position: relative !important;
+            margin-bottom: 12px !important;
+            z-index: 25 !important;
+          }
+          .about-nicy-monolith-word {
+            font-size: clamp(40px, 10vw, 54px) !important;
+            letter-spacing: 0.06em;
+            transform: scaleY(1.2);
+          }
+          .about-nicy-signature-logo {
+            width: 88%;
+            max-width: 92%;
+          }
+        }
+
+        .about-nicy-in-view .about-nicy-hairline-lockup {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      `}</style>
+
+      {/* Monumental CLASSES Lockup with Laser-cut signature logo overlay */}
+      <motion.div 
+        style={{ y: logoY }}
+        className="about-nicy-hairline-lockup"
+      >
+        <button
+          type="button"
+          onClick={() => setIsScheduleOpen((prev) => !prev)}
+          className="about-nicy-monolith-relative-stage focus:outline-none cursor-pointer"
+          title="Click to view Schedule"
+          aria-label="View Schedule"
+        >
+          <span className="about-nicy-monolith-word">CLASSES</span>
+
+          <div className="about-nicy-logo-centered-overlay">
+            <img
+              src={assetUrl('/logo-light.png')}
+              alt="Nicy Joseph"
+              className="about-nicy-signature-logo"
+            />
+          </div>
+        </button>
+      </motion.div>
+
+      {/* 3D Cylindrical Interactive Carousel (Connected First to Last, WACKING Visible, Tollywood & Bollywood Empty) */}
+      <div
+        ref={stageRef}
+        onMouseMove={handleMouseMove}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        className="about-nicy-3d-stage"
+        role="region"
+        aria-label="3D Classes Repertoire"
+      >
+        <div className="about-nicy-3d-track">
+          {VIRTUAL_SLIDES.map((item, idx) => (
+            <div
+              key={item.virtualKey}
+              ref={(el) => { cardRefs.current[idx] = el; }}
+              className="about-nicy-curved-card cursor-pointer"
+              onClick={handleCardClick}
+              title={`View ${item.label} Schedule`}
+            >
+              <div className="about-nicy-card-shell">
+                {item.image ? (
+                  /* Active photo (Hip Hop, Breakdancing, Popping & Locking, Freestyle, Wacking, Choreo) */
+                  <img
+                    src={item.image}
+                    alt={item.label}
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                    className="w-full h-full object-cover rounded-none brightness-[0.96] contrast-[1.04]"
+                  />
+                ) : (
+                  /* Empty Architectural Panel for Tollywood & Bollywood */
+                  <div className={`w-full h-full flex flex-col items-center justify-between p-6 ${
+                    isWhite 
+                      ? 'bg-black/[0.02] border border-black/10 text-stone-700' 
+                      : 'bg-white/[0.015] border border-white/[0.08] text-white/60'
+                  } relative select-none`}>
+                    <div className="w-full flex justify-between">
+                      <span className={`w-2.5 h-2.5 border-t border-l ${isWhite ? 'border-black/25' : 'border-white/25'}`} />
+                      <span className={`w-2.5 h-2.5 border-t border-r ${isWhite ? 'border-black/25' : 'border-white/25'}`} />
+                    </div>
+
+                    <div className="flex flex-col items-center justify-center text-center my-auto opacity-50">
+                      <div className={`w-7 h-7 rounded-full border ${isWhite ? 'border-black/20 text-black/60' : 'border-white/20 text-white/50'} flex items-center justify-center mb-2.5`}>
+                        <span className="text-[11px] font-mono leading-none">+</span>
+                      </div>
+                      <span className={`text-[9px] sm:text-[10px] tracking-[0.25em] uppercase font-mono font-semibold ${
+                        isWhite ? 'text-black/70' : 'text-white/60'
+                      }`}>
+                        STUDIO LAB
+                      </span>
+                    </div>
+
+                    <div className="w-full flex justify-between">
+                      <span className={`w-2.5 h-2.5 border-b border-l ${isWhite ? 'border-black/25' : 'border-white/25'}`} />
+                      <span className={`w-2.5 h-2.5 border-b border-r ${isWhite ? 'border-black/25' : 'border-white/25'}`} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Subtle aesthetic laser-cut corner markers */}
+                <div className={`absolute top-3 left-3 w-2 h-2 border-t border-l pointer-events-none ${isWhite ? 'border-black/20' : 'border-white/20'}`} />
+                <div className={`absolute top-3 right-3 w-2 h-2 border-t border-r pointer-events-none ${isWhite ? 'border-black/20' : 'border-white/20'}`} />
+                <div className={`absolute bottom-3 left-3 w-2 h-2 border-b border-l pointer-events-none ${isWhite ? 'border-black/20' : 'border-white/20'}`} />
+                <div className={`absolute bottom-3 right-3 w-2 h-2 border-b border-r pointer-events-none ${isWhite ? 'border-black/20' : 'border-white/20'}`} />
+                
+                <div className="about-nicy-card-glare" />
+              </div>
+
+              <div className="about-nicy-card-caption">
+                <span className="about-nicy-caption-label">{item.label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ============================================================== */}
+      {/* MINIMAL SCHEDULE TRIGGER: Centered with ample space below cards */}
+      {/* ============================================================== */}
+      <div className="flex flex-col items-center justify-center text-center mt-8 sm:mt-12 pb-6 sm:pb-10 z-25 relative w-full">
+        <button
+          type="button"
+          onClick={() => setIsScheduleOpen((prev) => !prev)}
+          className={`group inline-flex items-center justify-center cursor-pointer px-6 py-2 transition-all duration-300 ${
+            isWhite
+              ? 'text-stone-900 hover:text-black'
+              : 'text-stone-200 hover:text-white'
+          }`}
+          aria-expanded={isScheduleOpen}
+          aria-controls="classes-schedule"
+        >
+          <span className="font-['Bebas_Neue',_'Montserrat',_sans-serif] tracking-[0.26em] text-base sm:text-lg md:text-xl uppercase font-bold transition-transform duration-300 group-hover:scale-105">
+            {isScheduleOpen ? '— HIDE SCHEDULE —' : 'WEEKLY SCHEDULE'}
+          </span>
+        </button>
+      </div>
+
+      {/* ============================================================== */}
+      {/* MERGED SCHEDULE SECTION: Under carousel, opens permanently on click */}
+      {/* Minimal, elegant, small typography layout                       */}
+      {/* ============================================================== */}
+      <AnimatePresence>
+        {isScheduleOpen && (
+          <motion.div
+            id="classes-schedule"
+            initial={{ opacity: 0, y: 24, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: 20, height: 0 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            className="w-full max-w-3xl mx-auto px-4 sm:px-6 z-20 pb-16 pt-8 mt-2"
+          >
+            {/* Minimal Horizontal Navigation: MON · TUE · WED · THU · FRI */}
+            <div className="flex items-center justify-between border-b border-neutral-800/40 border-stone-200/60 pb-3 mb-6">
+              <span className={`text-[10px] sm:text-xs font-mono tracking-[0.25em] uppercase font-semibold ${
+                isWhite ? 'text-stone-400' : 'text-white/40'
+              }`}>
+                SCHEDULE
+              </span>
+
+              <nav aria-label="Schedule days" className="flex items-center gap-1 sm:gap-2">
+                {WEEKLY_SCHEDULE.map((day, idx) => {
+                  const isActive = idx === activeDayIndex;
+                  return (
+                    <React.Fragment key={day.id}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveDayIndex(idx)}
+                        className={`relative py-1 px-1.5 sm:px-2.5 text-[11px] sm:text-xs tracking-[0.18em] uppercase font-bold transition-all duration-200 cursor-pointer focus:outline-none ${
+                          isActive
+                            ? isWhite
+                              ? 'text-black'
+                              : 'text-white'
+                            : isWhite
+                            ? 'text-stone-400 hover:text-stone-700'
+                            : 'text-white/35 hover:text-white/70'
+                        }`}
+                      >
+                        <span>{day.short}</span>
+                        {isActive && (
+                          <motion.div
+                            layoutId="activeClassesDayPill"
+                            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                            className={`absolute bottom-0 inset-x-1.5 h-[1.5px] rounded-full ${
+                              isWhite ? 'bg-black' : 'bg-white'
+                            }`}
+                          />
+                        )}
+                      </button>
+
+                      {idx < WEEKLY_SCHEDULE.length - 1 && (
+                        <span
+                          aria-hidden="true"
+                          className={`text-[9px] select-none pointer-events-none ${
+                            isWhite ? 'text-stone-300' : 'text-white/20'
+                          }`}
+                        >
+                          ·
+                        </span>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Active Day Name & Class Listings: TIME — CLASS (Minimal Small Layout) */}
+            <div className="relative">
+              <div className="flex items-baseline justify-between mb-3">
+                <span className={`font-['Bebas_Neue',_'Montserrat',_sans-serif] text-xl sm:text-2xl tracking-[0.14em] uppercase font-black scale-y-[1.1] ${
+                  isWhite ? 'text-[#141312]' : 'text-white'
+                }`}>
+                  {currentScheduleDay.full}
+                </span>
+
+                <span className={`sm:hidden text-[9px] tracking-widest uppercase ${
+                  isWhite ? 'text-stone-400' : 'text-white/30'
+                }`}>
+                  Swipe
+                </span>
+              </div>
+
+              {/* Minimal List */}
+              <div className="flex flex-col divide-y divide-neutral-800/40 divide-stone-200/60 border-t border-b border-neutral-800/40 border-stone-200/60">
+                {currentScheduleDay.classes.map((item) => (
+                  <div
+                    key={`${currentScheduleDay.id}-${item.time}-${item.name}`}
+                    className={`py-2 sm:py-2.5 flex items-center justify-between transition-colors duration-200 ${
+                      isWhite ? 'hover:bg-black/[0.02]' : 'hover:bg-white/[0.02]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 sm:gap-4 font-['Montserrat',_sans-serif]">
+                      <span className={`font-mono text-xs sm:text-sm tracking-wider font-semibold ${
+                        isWhite ? 'text-stone-500' : 'text-white/50'
+                      }`}>
+                        {item.time}
+                      </span>
+                      <span className={`text-xs select-none ${
+                        isWhite ? 'text-stone-300' : 'text-white/30'
+                      }`}>
+                        —
+                      </span>
+                      <span className={`text-xs sm:text-sm font-medium tracking-tight ${
+                        isWhite ? 'text-[#1A1A1A]' : 'text-white/90'
+                      }`}>
+                        {item.name}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </section>
+  );
+};
