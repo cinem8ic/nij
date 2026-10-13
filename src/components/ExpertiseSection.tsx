@@ -297,8 +297,8 @@ export const ExpertiseSection: React.FC<ExpertiseSectionProps> = ({
                         transition={{ duration: 0.22, ease: 'easeOut' }}
                         className={`font-['Bebas_Neue',_'Montserrat',_sans-serif] font-bold text-2xl sm:text-3xl md:text-4xl lg:text-[3.25rem] leading-none tracking-[0.08em] uppercase ${
                           isWhite 
-                            ? 'text-[#B87A18] drop-shadow-[0_2px_14px_rgba(255,255,255,1)] drop-shadow-[0_1px_3px_rgba(255,255,255,1)]' 
-                            : 'text-[#dfba73] drop-shadow-[0_4px_24px_rgba(0,0,0,1)] drop-shadow-[0_1px_4px_rgba(0,0,0,1)]'
+                            ? 'bg-gradient-to-r from-stone-900 via-stone-700 to-stone-500/70 bg-clip-text text-transparent drop-shadow-[0_1px_4px_rgba(255,255,255,0.9)]' 
+                            : 'bg-gradient-to-r from-white via-stone-200/90 to-stone-400/60 bg-clip-text text-transparent drop-shadow-[0_2px_18px_rgba(255,255,255,0.35)]'
                         }`}
                       >
                         {GROUPS_DATA[activeGroupIndex].subheading}
@@ -422,23 +422,27 @@ export const ExpertiseSection: React.FC<ExpertiseSectionProps> = ({
               </div>
             ))}
 
-            {/* Inquire Action Button */}
-            <div className="pt-4 sm:pt-6">
+            {/* Inquire Action: Pure minimal text without boundary box */}
+            <div className="pt-2 sm:pt-4">
               <button
+                type="button"
                 onClick={() => onOpenInquiry(`Commission Inquiry: ${activeItem.name}`)}
-                className={`group relative inline-flex items-center justify-between gap-3 px-6 sm:px-8 py-3 rounded-full transition-all duration-300 cursor-pointer shadow-xl ${
-                  isWhite ? 'bg-black text-white hover:bg-stone-800' : 'bg-white text-black hover:bg-stone-200'
+                className={`group inline-flex items-center gap-2.5 py-1.5 text-xs sm:text-sm font-['Montserrat',_sans-serif] font-bold uppercase tracking-[0.24em] transition-all cursor-pointer select-none ${
+                  isWhite 
+                    ? 'text-stone-900 hover:text-black' 
+                    : 'text-stone-200 hover:text-white'
                 }`}
               >
-                <span className="font-['Montserrat',_sans-serif] text-[11px] sm:text-xs font-bold uppercase tracking-[0.22em]">INQUIRE</span>
-                <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110 shadow shrink-0 ${
-                  isWhite ? 'bg-white text-black' : 'bg-black text-white'
-                }`}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3 inline-block shrink-0">
-                    <line x1="7" y1="17" x2="17" y2="7"/>
-                    <polyline points="7 7 17 7 17 17"/>
-                  </svg>
-                </div>
+                <span className="relative">
+                  INQUIRE
+                  <span className={`absolute -bottom-1 left-0 w-0 group-hover:w-full h-px transition-all duration-300 ${
+                    isWhite ? 'bg-black' : 'bg-white'
+                  }`} />
+                </span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-0.5">
+                  <line x1="7" y1="17" x2="17" y2="7"/>
+                  <polyline points="7 7 17 7 17 17"/>
+                </svg>
               </button>
             </div>
 

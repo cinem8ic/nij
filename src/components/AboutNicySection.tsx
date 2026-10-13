@@ -275,20 +275,49 @@ export const AboutNicySection: React.FC<AboutNicySectionProps> = ({ theme = 'dar
     setIsScheduleOpen(true);
   };
 
-  // Mobile swipe handling on Schedule
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
+  // Mouse & Swipe handling on Schedule: drag horizontally with mouse or finger to change days!
+  const scheduleDragStartX = useRef(0);
+  const scheduleDragStartY = useRef(0);
+  const isScheduleDragging = useRef(false);
+  const [scheduleDragOffset, setScheduleDragOffset] = useState(0);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
+  const handleSchedulePointerDown = (e: React.PointerEvent) => {
+    isScheduleDragging.current = true;
+    scheduleDragStartX.current = e.clientX;
+    scheduleDragStartY.current = e.clientY;
+    setScheduleDragOffset(0);
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
+  const handleSchedulePointerMove = (e: React.PointerEvent) => {
+    if (!isScheduleDragging.current) return;
+    const dx = e.clientX - scheduleDragStartX.current;
+    // Tactile elastic displacement during drag
+    setScheduleDragOffset(Math.max(-40, Math.min(40, dx * 0.35)));
+  };
+
+  const handleSchedulePointerUp = (e: React.PointerEvent) => {
+    if (!isScheduleDragging.current) return;
+    isScheduleDragging.current = false;
+    const deltaX = e.clientX - scheduleDragStartX.current;
+    const deltaY = e.clientY - scheduleDragStartY.current;
+    setScheduleDragOffset(0);
+
+    // Responsive flick threshold for effortless mouse drag or swipe
+    if (Math.abs(deltaX) > 28 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
       if (deltaX < 0) {
+        // Drag left -> Next Day
+        setActiveDayIndex((prev) => Math.min(WEEKLY_SCHEDULE.length - 1, prev + 1));
+      } else {
+        // Drag right -> Prev Day
+        setActiveDayIndex((prev) => Math.max(0, prev - 1));
+      }
+    }
+  };
+
+  // Horizontal trackpad / wheel scrub for Schedule
+  const handleScheduleWheel = (e: React.WheelEvent) => {
+    if (Math.abs(e.deltaX) > 30) {
+      if (e.deltaX > 0) {
         setActiveDayIndex((prev) => Math.min(WEEKLY_SCHEDULE.length - 1, prev + 1));
       } else {
         setActiveDayIndex((prev) => Math.max(0, prev - 1));
@@ -614,13 +643,13 @@ export const AboutNicySection: React.FC<AboutNicySectionProps> = ({ theme = 'dar
       </div>
 
       {/* ============================================================== */}
-      {/* MINIMAL SCHEDULE TRIGGER: Centered with ample space below cards */}
+      {/* MINIMAL SCHEDULE TRIGGER: Pure minimal text, zero boundary pill */}
       {/* ============================================================== */}
-      <div className="flex flex-col items-center justify-center text-center mt-8 sm:mt-12 pb-6 sm:pb-10 z-25 relative w-full">
+      <div className="flex flex-col items-center justify-center text-center mt-6 sm:mt-10 pb-4 sm:pb-8 z-25 relative w-full">
         <button
           type="button"
           onClick={() => setIsScheduleOpen((prev) => !prev)}
-          className={`group inline-flex items-center justify-center cursor-pointer px-6 py-2 transition-all duration-300 ${
+          className={`group relative inline-flex items-center justify-center gap-2 cursor-pointer py-2 px-4 transition-all duration-300 select-none ${
             isWhite
               ? 'text-stone-900 hover:text-black'
               : 'text-stone-200 hover:text-white'
@@ -628,15 +657,17 @@ export const AboutNicySection: React.FC<AboutNicySectionProps> = ({ theme = 'dar
           aria-expanded={isScheduleOpen}
           aria-controls="classes-schedule"
         >
-          <span className="font-['Bebas_Neue',_'Montserrat',_sans-serif] tracking-[0.26em] text-base sm:text-lg md:text-xl uppercase font-bold transition-transform duration-300 group-hover:scale-105">
+          <span className="font-['Bebas_Neue',_'Montserrat',_sans-serif] tracking-[0.24em] text-base sm:text-lg md:text-xl uppercase font-bold relative">
             {isScheduleOpen ? '— HIDE SCHEDULE —' : 'WEEKLY SCHEDULE'}
+            <span className={`absolute -bottom-1 left-0 w-0 group-hover:w-full h-px transition-all duration-300 ${
+              isWhite ? 'bg-black' : 'bg-white'
+            }`} />
           </span>
         </button>
       </div>
 
       {/* ============================================================== */}
-      {/* MERGED SCHEDULE SECTION: Under carousel, opens permanently on click */}
-      {/* Minimal, elegant, small typography layout                       */}
+      {/* MERGED SCHEDULE SECTION: Floating glass with blur & pure texts */}
       {/* ============================================================== */}
       <AnimatePresence>
         {isScheduleOpen && (
@@ -646,108 +677,120 @@ export const AboutNicySection: React.FC<AboutNicySectionProps> = ({ theme = 'dar
             animate={{ opacity: 1, y: 0, height: 'auto' }}
             exit={{ opacity: 0, y: 20, height: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            className="w-full max-w-3xl mx-auto px-4 sm:px-6 z-20 pb-16 pt-8 mt-2"
+            onWheel={handleScheduleWheel}
+            className="w-full max-w-3xl mx-auto px-4 sm:px-6 z-20 pb-16 pt-2"
           >
-            {/* Minimal Horizontal Navigation: MON · TUE · WED · THU · FRI */}
-            <div className="flex items-center justify-between border-b border-neutral-800/40 border-stone-200/60 pb-3 mb-6">
-              <span className={`text-[10px] sm:text-xs font-mono tracking-[0.25em] uppercase font-semibold ${
-                isWhite ? 'text-stone-400' : 'text-white/40'
-              }`}>
-                SCHEDULE
-              </span>
+            <div 
+              onPointerDown={handleSchedulePointerDown}
+              onPointerMove={handleSchedulePointerMove}
+              onPointerUp={handleSchedulePointerUp}
+              onPointerCancel={handleSchedulePointerUp}
+              style={{ transform: `translate3d(${scheduleDragOffset}px, 0, 0)` }}
+              className={`w-full p-6 sm:p-8 backdrop-blur-3xl transition-transform duration-150 cursor-grab active:cursor-grabbing select-none touch-pan-y ${
+                isWhite 
+                  ? 'bg-white/60 text-stone-900 shadow-[0_20px_50px_rgba(0,0,0,0.06)]' 
+                  : 'bg-black/50 text-white shadow-[0_25px_60px_rgba(0,0,0,0.8)]'
+              }`}
+            >
+              {/* Minimal Horizontal Navigation: MON · TUE · WED · THU · FRI */}
+              <div className="flex items-center justify-between border-b border-white/10 border-stone-200/60 pb-3 mb-6">
+                <span className={`text-[10px] sm:text-xs font-mono tracking-[0.25em] uppercase font-semibold ${
+                  isWhite ? 'text-stone-400' : 'text-white/40'
+                }`}>
+                  SCHEDULE
+                </span>
 
-              <nav aria-label="Schedule days" className="flex items-center gap-1 sm:gap-2">
-                {WEEKLY_SCHEDULE.map((day, idx) => {
-                  const isActive = idx === activeDayIndex;
-                  return (
-                    <React.Fragment key={day.id}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveDayIndex(idx)}
-                        className={`relative py-1 px-1.5 sm:px-2.5 text-[11px] sm:text-xs tracking-[0.18em] uppercase font-bold transition-all duration-200 cursor-pointer focus:outline-none ${
-                          isActive
-                            ? isWhite
-                              ? 'text-black'
-                              : 'text-white'
-                            : isWhite
-                            ? 'text-stone-400 hover:text-stone-700'
-                            : 'text-white/35 hover:text-white/70'
-                        }`}
-                      >
-                        <span>{day.short}</span>
-                        {isActive && (
-                          <motion.div
-                            layoutId="activeClassesDayPill"
-                            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-                            className={`absolute bottom-0 inset-x-1.5 h-[1.5px] rounded-full ${
-                              isWhite ? 'bg-black' : 'bg-white'
-                            }`}
-                          />
-                        )}
-                      </button>
-
-                      {idx < WEEKLY_SCHEDULE.length - 1 && (
-                        <span
-                          aria-hidden="true"
-                          className={`text-[9px] select-none pointer-events-none ${
-                            isWhite ? 'text-stone-300' : 'text-white/20'
+                <nav aria-label="Schedule days" className="flex items-center gap-1 sm:gap-2">
+                  {WEEKLY_SCHEDULE.map((day, idx) => {
+                    const isActive = idx === activeDayIndex;
+                    return (
+                      <React.Fragment key={day.id}>
+                        <button
+                          type="button"
+                          onClick={() => setActiveDayIndex(idx)}
+                          className={`relative py-1 px-1.5 sm:px-2.5 text-[11px] sm:text-xs tracking-[0.18em] uppercase font-bold transition-all duration-200 cursor-pointer focus:outline-none ${
+                            isActive
+                              ? isWhite
+                                ? 'text-black'
+                                : 'text-white'
+                              : isWhite
+                              ? 'text-stone-400 hover:text-stone-700'
+                              : 'text-white/35 hover:text-white/70'
                           }`}
                         >
-                          ·
-                        </span>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </nav>
-            </div>
+                          <span>{day.short}</span>
+                          {isActive && (
+                            <motion.div
+                              layoutId="activeClassesDayPill"
+                              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                              className={`absolute bottom-0 inset-x-1.5 h-[1.5px] rounded-full ${
+                                isWhite ? 'bg-black' : 'bg-white'
+                              }`}
+                            />
+                          )}
+                        </button>
 
-            {/* Active Day Name & Class Listings: TIME — CLASS (Minimal Small Layout) */}
-            <div className="relative">
-              <div className="flex items-baseline justify-between mb-3">
-                <span className={`font-['Bebas_Neue',_'Montserrat',_sans-serif] text-xl sm:text-2xl tracking-[0.14em] uppercase font-black scale-y-[1.1] ${
-                  isWhite ? 'text-[#141312]' : 'text-white'
-                }`}>
-                  {currentScheduleDay.full}
-                </span>
-
-                <span className={`sm:hidden text-[9px] tracking-widest uppercase ${
-                  isWhite ? 'text-stone-400' : 'text-white/30'
-                }`}>
-                  Swipe
-                </span>
+                        {idx < WEEKLY_SCHEDULE.length - 1 && (
+                          <span
+                            aria-hidden="true"
+                            className={`text-[9px] select-none pointer-events-none ${
+                              isWhite ? 'text-stone-300' : 'text-white/20'
+                            }`}
+                          >
+                            ·
+                          </span>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </nav>
               </div>
 
-              {/* Minimal List */}
-              <div className="flex flex-col divide-y divide-neutral-800/40 divide-stone-200/60 border-t border-b border-neutral-800/40 border-stone-200/60">
-                {currentScheduleDay.classes.map((item) => (
-                  <div
-                    key={`${currentScheduleDay.id}-${item.time}-${item.name}`}
-                    className={`py-2 sm:py-2.5 flex items-center justify-between transition-colors duration-200 ${
-                      isWhite ? 'hover:bg-black/[0.02]' : 'hover:bg-white/[0.02]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 sm:gap-4 font-['Montserrat',_sans-serif]">
-                      <span className={`font-mono text-xs sm:text-sm tracking-wider font-semibold ${
-                        isWhite ? 'text-stone-500' : 'text-white/50'
-                      }`}>
-                        {item.time}
-                      </span>
-                      <span className={`text-xs select-none ${
-                        isWhite ? 'text-stone-300' : 'text-white/30'
-                      }`}>
-                        —
-                      </span>
-                      <span className={`text-xs sm:text-sm font-medium tracking-tight ${
-                        isWhite ? 'text-[#1A1A1A]' : 'text-white/90'
-                      }`}>
-                        {item.name}
-                      </span>
+              {/* Active Day Name & Class Listings: TIME — CLASS (Minimal Small Layout) */}
+              <div className="relative">
+                <div className="flex items-baseline justify-between mb-3">
+                  <span className={`font-['Bebas_Neue',_'Montserrat',_sans-serif] text-xl sm:text-2xl tracking-[0.14em] uppercase font-black scale-y-[1.1] ${
+                    isWhite ? 'text-[#141312]' : 'text-white'
+                  }`}>
+                    {currentScheduleDay.full}
+                  </span>
+
+                  <span className={`sm:hidden text-[9px] tracking-widest uppercase ${
+                    isWhite ? 'text-stone-400' : 'text-white/30'
+                  }`}>
+                    Swipe
+                  </span>
+                </div>
+
+                {/* Minimal List */}
+                <div className="flex flex-col divide-y divide-white/10 divide-stone-200/60 border-t border-b border-white/10 border-stone-200/60">
+                  {currentScheduleDay.classes.map((item) => (
+                    <div
+                      key={`${currentScheduleDay.id}-${item.time}-${item.name}`}
+                      className={`py-2 sm:py-2.5 flex items-center justify-between transition-colors duration-200 ${
+                        isWhite ? 'hover:bg-black/[0.02]' : 'hover:bg-white/[0.03]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4 font-['Montserrat',_sans-serif]">
+                        <span className={`font-mono text-xs sm:text-sm tracking-wider font-semibold ${
+                          isWhite ? 'text-stone-500' : 'text-white/50'
+                        }`}>
+                          {item.time}
+                        </span>
+                        <span className={`text-xs select-none ${
+                          isWhite ? 'text-stone-300' : 'text-white/30'
+                        }`}>
+                          —
+                        </span>
+                        <span className={`text-xs sm:text-sm font-medium tracking-tight ${
+                          isWhite ? 'text-[#1A1A1A]' : 'text-white/90'
+                        }`}>
+                          {item.name}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </motion.div>

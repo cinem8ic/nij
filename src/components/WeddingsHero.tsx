@@ -1,4 +1,5 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Volume2, VolumeX } from 'lucide-react';
 import { Magnetic } from './Magnetic';
 import { assetUrl } from '../utils/assets';
 
@@ -9,6 +10,7 @@ interface WeddingsHeroProps {
 export const WeddingsHero: React.FC<WeddingsHeroProps> = ({ theme = 'dark' }) => {
   const isWhite = theme === 'white';
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
   const logoSrc = assetUrl('/logo-dark.png');
 
   useEffect(() => {
@@ -18,6 +20,17 @@ export const WeddingsHero: React.FC<WeddingsHeroProps> = ({ theme = 'dark' }) =>
       video.play().catch(() => {});
     }
   }, []);
+
+  const toggleAudio = () => {
+    if (videoRef.current) {
+      const next = !videoRef.current.muted;
+      videoRef.current.muted = next;
+      setIsMuted(next);
+      if (!next) {
+        videoRef.current.play().catch(() => {});
+      }
+    }
+  };
 
   return (
     <section 
@@ -103,6 +116,33 @@ export const WeddingsHero: React.FC<WeddingsHeroProps> = ({ theme = 'dark' }) =>
             </a>
           </Magnetic>
         </div>
+      </div>
+
+      {/* 5. MINIMAL MUSIC/SOUND TOGGLE AT BOTTOM RIGHT CORNER (PURE ICON, ZERO CIRCLE) */}
+      <div className="absolute bottom-6 sm:bottom-10 right-5 sm:right-8 z-30 pointer-events-auto">
+        <Magnetic strength={0.3}>
+          <button
+            type="button"
+            onClick={toggleAudio}
+            aria-label={isMuted ? 'Unmute video audio' : 'Mute video audio'}
+            title={isMuted ? 'Listen to film audio' : 'Mute audio'}
+            className="p-1 flex items-center justify-center transition-all duration-300 cursor-pointer group hover:scale-115 active:scale-95 bg-transparent border-none outline-none focus:outline-none"
+          >
+            {isMuted ? (
+              <VolumeX className={`w-4 h-4 sm:w-5 sm:h-5 stroke-[1.7] transition-all duration-300 ${
+                isWhite
+                  ? 'text-stone-800/80 group-hover:text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]'
+                  : 'text-white/70 group-hover:text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]'
+              }`} />
+            ) : (
+              <Volume2 className={`w-4 h-4 sm:w-5 sm:h-5 stroke-[1.7] transition-all duration-300 ${
+                isWhite
+                  ? 'text-stone-900 group-hover:text-black drop-shadow-[0_1px_4px_rgba(255,255,255,0.9)]'
+                  : 'text-[#dfba73] group-hover:text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]'
+              }`} />
+            )}
+          </button>
+        </Magnetic>
       </div>
 
     </section>

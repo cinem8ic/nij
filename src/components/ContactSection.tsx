@@ -62,40 +62,52 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
     >
       <div className="relative z-10 max-w-[1540px] w-full mx-auto px-6 sm:px-12 md:px-20 lg:px-28 space-y-8 sm:space-y-10">
         
-        {/* Interactive Top Action Buttons: Both COMMISSION & STUDIO PASS with High Contrast */}
+        {/* Interactive Top Action Buttons: Both COMMISSION & STUDIO PASS with Minimal Text & Floating Blur */}
         <FadeInUp delay={0.05} yOffset={20}>
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 pt-2">
             
-            {/* 1. COMMISSION Action Button */}
+            {/* 1. COMMISSION Action */}
             <Magnetic strength={0.35}>
               <button
+                type="button"
                 onClick={() => onOpenInquiry?.('Directorial Commissions & Screen Choreo')}
-                className={`group flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3.5 transition-all duration-300 cursor-pointer text-xs sm:text-[13px] font-wide font-bold tracking-[0.24em] uppercase border-none ${
+                className={`group relative inline-flex items-center justify-center gap-2 py-2 px-3 transition-all duration-300 cursor-pointer text-xs sm:text-[13px] font-wide font-bold tracking-[0.24em] uppercase select-none ${
                   isWhite
-                    ? 'bg-black text-white hover:bg-stone-800 shadow-[0_15px_45px_rgba(0,0,0,0.12)]'
-                    : 'bg-white text-black hover:bg-[#faeed7] shadow-[0_15px_45px_rgba(0,0,0,0.9)]'
+                    ? 'text-stone-900 hover:text-black'
+                    : 'text-stone-200 hover:text-white'
                 }`}
               >
-                <span>COMMISSION</span>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 inline-block transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                <span className="relative">
+                  COMMISSION
+                  <span className={`absolute -bottom-1 left-0 w-0 group-hover:w-full h-px transition-all duration-300 ${
+                    isWhite ? 'bg-black' : 'bg-white'
+                  }`} />
+                </span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 relative z-10 inline-block transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-0.5">
                   <line x1="7" y1="17" x2="17" y2="7"/>
                   <polyline points="7 7 17 7 17 17"/>
                 </svg>
               </button>
             </Magnetic>
 
-            {/* 2. STUDIO PASS Action Button (Equally Visible, High-Contrast Luxury Button) */}
+            {/* 2. STUDIO PASS Action */}
             <Magnetic strength={0.35}>
               <button
+                type="button"
                 onClick={() => onOpenInquiry?.('Studio Pass & Class Admissions')}
-                className={`group flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3.5 transition-all duration-300 cursor-pointer text-xs sm:text-[13px] font-wide font-bold tracking-[0.24em] uppercase ${
+                className={`group relative inline-flex items-center justify-center gap-2 py-2 px-3 transition-all duration-300 cursor-pointer text-xs sm:text-[13px] font-wide font-bold tracking-[0.24em] uppercase select-none ${
                   isWhite
-                    ? 'bg-black/[0.06] text-black hover:bg-black hover:text-white border border-black/20 shadow-[0_15px_45px_rgba(0,0,0,0.06)]'
-                    : 'bg-white/[0.14] text-white hover:bg-white hover:text-black border border-white/30 shadow-[0_15px_45px_rgba(0,0,0,0.8)]'
+                    ? 'text-stone-900 hover:text-black'
+                    : 'text-stone-200 hover:text-white'
                 }`}
               >
-                <span>STUDIO PASS</span>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 inline-block transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                <span className="relative">
+                  STUDIO PASS
+                  <span className={`absolute -bottom-1 left-0 w-0 group-hover:w-full h-px transition-all duration-300 ${
+                    isWhite ? 'bg-black' : 'bg-white'
+                  }`} />
+                </span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 relative z-10 inline-block transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-0.5">
                   <line x1="7" y1="17" x2="17" y2="7"/>
                   <polyline points="7 7 17 7 17 17"/>
                 </svg>

@@ -151,7 +151,7 @@ export const StudioSection: React.FC<StudioSectionProps> = ({
 
               <button
                 onClick={() => onOpenInquiry(`Studio Pass: ${currentProgram.title}`)}
-                className="px-6 py-3 rounded-full bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-200 text-black font-mono text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer flex items-center gap-2 shadow-lg shrink-0"
+                className="px-6 py-3 rounded-full backdrop-blur-xl bg-white/[0.08] hover:bg-white/[0.16] text-white border border-white/25 hover:border-white/45 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 shadow-xl hover:-translate-y-0.5 shrink-0"
               >
                 <span>RESERVE PASS</span>
                 <svg 

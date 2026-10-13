@@ -161,8 +161,8 @@ export const RentStudioSection: React.FC<RentStudioSectionProps> = ({ theme = 'd
                 title="Google Maps Coordinates"
                 className={`hidden sm:flex absolute -bottom-6 -right-2 sm:-bottom-8 sm:right-6 md:right-12 w-[24vw] min-w-[110px] max-w-[210px] aspect-square rounded-2xl overflow-hidden backdrop-blur-2xl transition-all duration-500 flex-col items-center justify-center gap-3.5 z-30 group/portal cursor-pointer ${
                   isWhite
-                    ? 'border border-black/15 bg-white/85 shadow-[0_20px_50px_rgba(0,0,0,0.12)] hover:border-black/40 hover:bg-white hover:scale-105'
-                    : 'border border-white/20 bg-black/70 shadow-[0_25px_60px_rgba(0,0,0,0.98)] hover:border-white/50 hover:bg-black/90 hover:scale-105'
+                    ? 'border border-black/15 bg-white/60 hover:bg-white/80 shadow-[0_20px_50px_rgba(0,0,0,0.10)] hover:border-black/35 hover:scale-105'
+                    : 'border border-white/20 bg-black/45 hover:bg-black/70 shadow-[0_25px_60px_rgba(0,0,0,0.85)] hover:border-white/45 hover:scale-105'
                 }`}
               >
                 {/* Radial Pulse Backing */}

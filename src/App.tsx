@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Lenis from 'lenis';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSpatialDepthBlur } from './hooks/useSpatialDepthBlur';
@@ -85,6 +85,8 @@ export default function App() {
 
   useSpatialDepthBlur();
 
+  const lenisRef = useRef<Lenis | null>(null);
+
   // Billion-dollar ultra-smooth fluid momentum scroll implementation
   useEffect(() => {
     const lenis = new Lenis({
@@ -98,6 +100,11 @@ export default function App() {
       syncTouch: false,
     });
 
+    lenisRef.current = lenis;
+    if (typeof window !== 'undefined') {
+      (window as any).lenis = lenis;
+    }
+
     let rafId: number;
     function raf(time: number) {
       lenis.raf(time);
@@ -109,6 +116,10 @@ export default function App() {
     return () => {
       cancelAnimationFrame(rafId);
       lenis.destroy();
+      lenisRef.current = null;
+      if (typeof window !== 'undefined') {
+        delete (window as any).lenis;
+      }
     };
   }, []);
 
@@ -119,7 +130,8 @@ export default function App() {
 
   const handleSelectPage = (page: PageRoute) => {
     setActivePage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    lenisRef.current?.scrollTo(0, { immediate: true });
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as any });
   };
 
   return (

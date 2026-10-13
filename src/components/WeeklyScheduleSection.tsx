@@ -122,28 +122,39 @@ export const WeeklyScheduleSection: React.FC<WeeklyScheduleSectionProps> = ({
     setActiveDayIndex(idx);
   };
 
-  // Mobile Touch / Swipe Handling (predictable horizontal swipe only)
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
+  // Mouse Drag & Touch Swipe Handling
+  const pointerStartX = useRef(0);
+  const pointerStartY = useRef(0);
+  const isPointerDragging = useRef(false);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
+  const handlePointerDown = (e: React.PointerEvent) => {
+    isPointerDragging.current = true;
+    pointerStartX.current = e.clientX;
+    pointerStartY.current = e.clientY;
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-    const deltaX = touchEndX - touchStartX.current;
-    const deltaY = touchEndY - touchStartY.current;
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isPointerDragging.current) return;
+    isPointerDragging.current = false;
+    const deltaX = e.clientX - pointerStartX.current;
+    const deltaY = e.clientY - pointerStartY.current;
 
-    // Horizontal swipe threshold (must be distinctly horizontal, not vertical scrolling)
-    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
+    if (Math.abs(deltaX) > 30 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
       if (deltaX < 0) {
-        // Swipe Left -> Next Day
+        // Drag Left -> Next Day
         setActiveDayIndex((prev) => Math.min(WEEKLY_SCHEDULE.length - 1, prev + 1));
       } else {
-        // Swipe Right -> Prev Day
+        // Drag Right -> Prev Day
+        setActiveDayIndex((prev) => Math.max(0, prev - 1));
+      }
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (Math.abs(e.deltaX) > 30) {
+      if (e.deltaX > 0) {
+        setActiveDayIndex((prev) => Math.min(WEEKLY_SCHEDULE.length - 1, prev + 1));
+      } else {
         setActiveDayIndex((prev) => Math.max(0, prev - 1));
       }
     }
@@ -155,9 +166,10 @@ export const WeeklyScheduleSection: React.FC<WeeklyScheduleSectionProps> = ({
     <section
       id="schedule"
       ref={sectionRef}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      className="py-16 sm:py-20 md:py-24 select-none relative overflow-hidden bg-transparent"
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onWheel={handleWheel}
+      className="py-16 sm:py-20 md:py-24 select-none relative overflow-hidden bg-transparent cursor-grab active:cursor-grabbing"
     >
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 md:px-10 lg:px-14 relative z-20">
         

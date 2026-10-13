@@ -116,11 +116,9 @@ export const SelectedProjectsGallery: React.FC<SelectedProjectsGalleryProps> = (
 
                 {/* Top Left Badge (Screenshot 25: GOLD · 1.4 AWARDS) */}
                 {project.awardBadge && (
-                  <div className="absolute top-5 left-5 z-10">
-                    <span className="px-3 py-1 text-[10px] md:text-[11px] font-mono-meta font-bold rounded-sm uppercase tracking-wider bg-black/60 backdrop-blur-md text-white border border-white/20">
-                      {project.awardBadge}
-                    </span>
-                  </div>
+                  <span className="absolute top-5 left-5 z-10 text-[10px] md:text-[11px] font-mono-meta font-bold uppercase tracking-wider text-white/95 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
+                    {project.awardBadge}
+                  </span>
                 )}
 
                 {/* Top Right Video Icon if project contains video */}
